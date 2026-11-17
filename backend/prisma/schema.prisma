@@ -1,0 +1,57 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Item {
+  id           String         @id @default(uuid())
+  title        String
+  sourceType   String         // NOTE | URL
+  sourceUrl    String?
+  rawContent   String
+  status       String         @default("PENDING") // PENDING | PROCESSING | COMPLETED | FAILED
+  errorMessage String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  chunks       Chunk[]
+  jobs         IngestionJob[]
+
+  @@index([status])
+}
+
+model Chunk {
+  id                  String   @id @default(uuid())
+  itemId              String
+  chunkIndex          Int
+  content             String
+  tokenCount          Int?
+  embedding           String   // Serialized JSON array of numbers
+  embeddingProvider   String   // e.g. "gemini"
+  embeddingModel      String   // e.g. "gemini-embedding-001"
+  embeddingDimensions Int
+  createdAt           DateTime @default(now())
+  item                Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, chunkIndex])
+  @@index([itemId])
+}
+
+model IngestionJob {
+  id          String    @id @default(uuid())
+  itemId      String
+  status      String    @default("PENDING") // PENDING | PROCESSING | COMPLETED | FAILED
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  lastError   String?
+  lockedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  item        Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([itemId])
+}
