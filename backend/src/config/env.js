@@ -10,7 +10,7 @@ const envSchema = z.object({
   FRONTEND_ORIGIN: z.string().default('http://localhost:5173'),
 
   LLM_PROVIDER: z.string().default('gemini'),
-  LLM_MODEL: z.string().default('gemini-3.8-flash'),
+  LLM_MODEL: z.string().default('gemini-3-flash-preview'),
   GEMINI_API_KEY: z.string().optional().default(''),
 
   EMBEDDING_PROVIDER: z.string().default('gemini'),

@@ -6,6 +6,9 @@ import { logger } from './config/logger.js';
 import { requestIdMiddleware } from './middleware/request-id.middleware.js';
 import { errorMiddleware, AppError } from './middleware/error.middleware.js';
 import healthRoutes from './routes/health.routes.js';
+import ingestRoutes from './routes/ingest.routes.js';
+import itemsRoutes from './routes/items.routes.js';
+import queryRoutes from './routes/query.routes.js';
 
 export const app = express();
 
@@ -32,6 +35,9 @@ app.use(express.json({ limit: env.MAX_INGEST_BYTES }));
 
 // Routes
 app.use('/api/health', healthRoutes);
+app.use('/api/ingest', ingestRoutes);
+app.use('/api/items', itemsRoutes);
+app.use('/api/query', queryRoutes);
 
 // Catch-all 404
 app.use((req, res, next) => {

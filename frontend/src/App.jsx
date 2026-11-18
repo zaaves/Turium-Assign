@@ -1,133 +1,134 @@
-import React, { useEffect, useState } from 'react';
-import { checkBackendHealth } from './services/apiClient';
-import { Sparkles, Inbox, BookOpen, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import React, { useState } from 'react';
+import Header from './components/Header';
+import AddContentForm from './components/AddContentForm';
+import ItemList from './components/ItemList';
+import QuestionForm from './components/QuestionForm';
+import AnswerPanel from './components/AnswerPanel';
+import ItemDetailDrawer from './components/ItemDetailDrawer';
+import { useItems } from './hooks/useItems';
+import { useQuery } from './hooks/useQuery';
+import { BookOpen, Sparkles } from 'lucide-react';
 
 export default function App() {
-  const [health, setHealth] = useState({ status: 'checking', message: 'Checking backend connection...' });
+  const [mobileTab, setMobileTab] = useState('library'); // 'library' | 'assistant'
 
-  const fetchHealth = async () => {
-    try {
-      setHealth({ status: 'checking', message: 'Checking backend...' });
-      const res = await checkBackendHealth();
-      if (res.success && res.data?.status === 'healthy') {
-        setHealth({
-          status: 'healthy',
-          message: `Connected to API (Uptime: ${Math.round(res.data.uptime)}s)`,
-        });
-      } else {
-        setHealth({ status: 'error', message: 'API returned abnormal status' });
-      }
-    } catch (err) {
-      setHealth({ status: 'error', message: err.message || 'Cannot connect to backend' });
-    }
-  };
+  const {
+    items,
+    loading: itemsLoading,
+    error: itemsError,
+    isPolling,
+    hasActiveItems,
+    refreshItems,
+    selectedItem,
+    loadingDetails,
+    detailsError,
+    openItemDetails,
+    closeItemDetails,
+  } = useItems();
 
-  useEffect(() => {
-    fetchHealth();
-  }, []);
+  const {
+    querying,
+    queryResult,
+    queryError,
+    lastQuestion,
+    highlightedSourceLabel,
+    askQuestion,
+    highlightCitation,
+  } = useQuery();
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col text-slate-800">
-      {/* Top Navbar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-sm shadow-indigo-200">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="font-semibold text-slate-900 leading-tight">Turium AI Knowledge Inbox</h1>
-              <p className="text-xs text-slate-500">Retrieval-Augmented Generation & Ingestion Engine</p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-slate-50 flex flex-col text-slate-800 selection:bg-indigo-100 selection:text-indigo-800">
+      {/* Top Navigation */}
+      <Header isPolling={isPolling} activeJobsCount={items.filter((i) => i.status === 'PROCESSING').length} />
 
-          <div className="flex items-center gap-4">
-            {/* Health Badge */}
-            <div
-              className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                health.status === 'healthy'
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                  : health.status === 'error'
-                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                  : 'bg-amber-50 text-amber-700 border border-amber-200'
-              }`}
-            >
-              {health.status === 'healthy' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
-              {health.status === 'error' && <AlertCircle className="w-3.5 h-3.5 text-rose-500" />}
-              {health.status === 'checking' && <RefreshCw className="w-3.5 h-3.5 text-amber-500 animate-spin" />}
-              <span>{health.message}</span>
-            </div>
+      {/* Mobile Tab Switcher */}
+      <div className="lg:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-around text-xs font-semibold">
+        <button
+          onClick={() => setMobileTab('library')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 border-b-2 transition-colors ${
+            mobileTab === 'library'
+              ? 'border-indigo-600 text-indigo-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <BookOpen className="w-4 h-4" />
+          Knowledge Library ({items.length})
+        </button>
 
-            <button
-              onClick={fetchHealth}
-              className="text-xs text-slate-500 hover:text-slate-800 transition-colors p-1"
-              title="Refresh health status"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      </header>
+        <button
+          onClick={() => setMobileTab('assistant')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 border-b-2 transition-colors ${
+            mobileTab === 'assistant'
+              ? 'border-indigo-600 text-indigo-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Sparkles className="w-4 h-4" />
+          AI Assistant
+        </button>
+      </div>
 
-      {/* Main Content Scaffold */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {/* Main Dashboard Grid */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         {/* Left Column: Knowledge Management */}
-        <section className="lg:col-span-5 flex flex-col gap-6">
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-slate-900 flex items-center gap-2">
-                <Inbox className="w-4 h-4 text-indigo-600" />
-                Add Knowledge
-              </h2>
-              <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">Milestone 1</span>
-            </div>
-            <p className="text-sm text-slate-600 leading-relaxed">
-              Foundation initialized. Note and URL ingestion forms with asynchronous SQLite queue will be activated in
-              Milestone 2.
-            </p>
-          </div>
+        <section
+          className={`lg:col-span-5 flex flex-col gap-6 w-full ${
+            mobileTab === 'library' ? 'flex' : 'hidden lg:flex'
+          }`}
+        >
+          <AddContentForm onIngestSuccess={refreshItems} />
 
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex-1">
-            <h2 className="font-semibold text-slate-900 flex items-center gap-2 mb-4">
-              <BookOpen className="w-4 h-4 text-indigo-600" />
-              Saved Items
-            </h2>
-            <div className="text-center py-12 text-slate-400 text-sm">
-              <p>No items ingested yet.</p>
-              <p className="text-xs text-slate-400 mt-1">Ingestion pipeline ready for activation.</p>
-            </div>
-          </div>
+          <ItemList
+            items={items}
+            loading={itemsLoading}
+            error={itemsError}
+            isPolling={isPolling}
+            onRefresh={refreshItems}
+            onSelectItem={openItemDetails}
+            selectedItemId={selectedItem?.id}
+          />
         </section>
 
-        {/* Right Column: Q&A Interface */}
-        <section className="lg:col-span-7 flex flex-col gap-6">
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex-1 flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-slate-900 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
-                Ask Your Knowledge
-              </h2>
-              <span className="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-medium">RAG Ready</span>
-            </div>
-            <p className="text-sm text-slate-600 mb-6">
-              Ask natural language questions over your saved documents and URLs. Grounded answers and citations will
-              be powered by Gemini embeddings and LLM adapters.
-            </p>
+        {/* Right Column: AI Assistant & Grounded Q&A */}
+        <section
+          className={`lg:col-span-7 flex flex-col gap-6 w-full ${
+            mobileTab === 'assistant' ? 'flex' : 'hidden lg:flex'
+          }`}
+        >
+          <QuestionForm
+            onSubmit={(q, topK) => askQuestion(q, topK)}
+            querying={querying}
+            disabled={items.filter((i) => i.status === 'COMPLETED').length === 0}
+          />
 
-            <div className="border border-slate-200 rounded-lg p-3 bg-slate-50 flex items-center gap-2 text-slate-400 text-sm">
-              <span>What do my notes say about...?</span>
-            </div>
-
-            <div className="mt-8 flex-1 flex items-center justify-center border-2 border-dashed border-slate-100 rounded-xl p-8 text-center text-slate-400 text-sm">
-              <span>RAG query response panel will render here in Milestone 4.</span>
-            </div>
-          </div>
+          <AnswerPanel
+            queryResult={queryResult}
+            querying={querying}
+            queryError={queryError}
+            lastQuestion={lastQuestion}
+            highlightedSourceLabel={highlightedSourceLabel}
+            onHighlightCitation={highlightCitation}
+            onInspectSource={openItemDetails}
+          />
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
-        Turium AI Full Stack Assessment &bull; ES Modules &bull; SQLite + Prisma &bull; Express &bull; React + Vite
+      {/* Slide-over Item Inspection Drawer */}
+      <ItemDetailDrawer
+        item={selectedItem}
+        loading={loadingDetails}
+        error={detailsError}
+        onClose={closeItemDetails}
+      />
+
+      {/* Global Footer */}
+      <footer className="border-t border-slate-200/80 bg-white py-4 text-center text-xs text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span>Turium AI Knowledge Inbox &bull; Full Stack Developer Assessment</span>
+          <span className="font-mono text-[11px] text-slate-400">
+            ES Modules &bull; SQLite (Prisma) &bull; Express &bull; React + Vite &bull; Tailwind CSS
+          </span>
+        </div>
       </footer>
     </div>
   );

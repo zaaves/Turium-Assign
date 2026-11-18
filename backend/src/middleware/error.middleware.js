@@ -10,8 +10,9 @@ export class AppError extends Error {
 
 export function errorMiddleware(err, req, res, _next) {
   const statusCode = err.statusCode || (err.status && typeof err.status === 'number' ? err.status : 500);
+  const isAppError = err instanceof AppError;
   const errorCode = err.code || (statusCode >= 500 ? 'INTERNAL_ERROR' : 'BAD_REQUEST');
-  const message = statusCode >= 500 ? 'An unexpected server error occurred.' : err.message;
+  const message = isAppError || statusCode < 500 ? err.message : 'An unexpected server error occurred.';
 
   logger.error(
     {
