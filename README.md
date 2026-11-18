@@ -92,7 +92,7 @@ flowchart TD
     QueryCtrl -->|Embed Query| EmbedAdapter
     QueryCtrl -->|Cosine Similarity Search| TableChunks
     QueryCtrl -->|Synthesize Grounded Answer| LLMAdapter
-    LLMAdapter -->|Verified Citations [S1]| Assistant
+    LLMAdapter -->|"Verified Citations [S1]"| Assistant
 ```
 
 ---
